@@ -12,7 +12,7 @@ set -euo pipefail
 dir=$5
 mkdir -p $dir
 
-run_dir=$(basename $(realpath "$0"))
+run_dir=$(dirname $(realpath "$0"))
 
 num_cpus=${7:-1}
 
@@ -45,10 +45,12 @@ echo "Getting PCAs..."
 if [[ $count -gt 5000 ]]; then
     plink2 --bfile ${plink_pref} \
             --pca approx 5 \
+            --threads $num_cpus \
             --out ${plink_pref} > /dev/null
 else
     plink2 --bfile ${plink_pref} \
             --pca 5 \
+            --threads $num_cpus \
             --out ${plink_pref} > /dev/null
 fi
 
