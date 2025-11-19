@@ -58,8 +58,8 @@ for file, cluster in zip(input_files, cluster_names):
     
     # Save the processed data as a CSV file
     data=pd.DataFrame(pdata.X, index=pdata.obs_names, columns=pdata.var_names)
-    output_file1 = os.path.join(f"{workdir}/{os.path.splitext(os.path.basename(file))[0]}_expression_matrix_ds.csv")
-    output_file2 = os.path.join(f"{workdir}/{os.path.splitext(os.path.basename(file))[0]}_composition_matrix_ds.csv")
+    output_file1 = os.path.join(f"{workdir}/processed_matrices/{os.path.splitext(os.path.basename(file))[0]}_expression_matrix_ds.csv")
+    output_file2 = os.path.join(f"{workdir}/processed_matrices/{os.path.splitext(os.path.basename(file))[0]}_composition_matrix_ds.csv")
     common_samples = data.index.intersection(combined_df_corrected.index)
     # Filter both datasets to only include common samples
     data_aligned = data.loc[common_samples]

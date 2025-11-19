@@ -1,5 +1,5 @@
 #!/bin/bash
-# $1 path to plink genotype object, gcloud (will cp) or local
+# $1 path to plink genotype object NO EXTENSION, gcloud (will cp) or local
 # $2 path to h5ad file to analyze, gcloud (will cp) or local
 # $3 name of anndata .obs cluster column to use
 # $4 path to covariates file by sample 
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 dir=$5
-mkdir -p $dir
+mkdir -p $dir $dir/processed_matrices $dir/osca_input $dir/osca_intermediate
 
 run_dir=$(dirname $(realpath "$0"))
 
@@ -19,10 +19,12 @@ num_cpus=${7:-1}
 echo "Loading files..."
 if [[ $1 == gs* ]]; then
     gcloud storage cp ${1}'*' $dir
-    plink_pref=$dir/$(basename "$1")
+    plink_path=$dir/$(basename "$1")
 else
-    plink_pref=$1
+    plink_path=$1
 fi
+
+plink_pref=$(basename "$1")
 
 if [[ $2 == gs* ]]; then
     gcloud storage cp ${2}'*' $dir
@@ -30,6 +32,7 @@ if [[ $2 == gs* ]]; then
 else
     h5ad_path=$2
 fi
+h5ad_pref=$(basename -s .h5ad $h5ad_path)
 
 if [[ $4 == gs* ]]; then
     gcloud storage cp ${4}'*' $dir
@@ -39,19 +42,19 @@ else
 fi
 
 
-count=$(wc -l ${plink_pref}.fam | awk '{print $1}')
+count=$(wc -l ${plink_path}.fam | awk '{print $1}')
 
 echo "Getting PCAs..."
 if [[ $count -gt 5000 ]]; then
-    plink2 --bfile ${plink_pref} \
+    plink2 --bfile ${plink_path} \
             --pca approx 5 \
             --threads $num_cpus \
-            --out ${plink_pref} > /dev/null
+            --out ${dir}/$plink_pref > /dev/null
 else
-    plink2 --bfile ${plink_pref} \
+    plink2 --bfile ${plink_path} \
             --pca 5 \
             --threads $num_cpus \
-            --out ${plink_pref} > /dev/null
+            --out ${dir}/$plink_pref > /dev/null
 fi
 
 
@@ -60,36 +63,35 @@ python3 $run_dir/expr_comp_matrices.py $dir ${h5ad_path} ${3} > /dev/null
 
 
 echo "Formatting files for OSCA..."
-Rscript $run_dir/OSCA_format.r $plink_pref $cov_file $dir $run_dir > /dev/null
+Rscript $run_dir/OSCA_format.r $plink_path $cov_file $dir $run_dir $h5ad_pref > /dev/null
 
 
 # Log file names with prefix from final output
-progress_log="$dir/osca_progress.log"
+progress_log="$dir/osca_intermediate/osca_progress.log"
 
-h5ad_pref=$(basename -s .h5ad $h5ad_path)
-befile_prefix="$dir/${h5ad_pref}_osca"
-final_output="$dir/${h5ad_pref}_final"
+befile_prefix="$dir/osca_intermediate/${h5ad_pref}_osca"
+final_output="$dir/${h5ad_pref}_"
 
 # Step 1: Create BOD file
 echo "OSCA: Running gene-expression --make-bod..."
-osca --efile $dir/Phenotype_${h5ad_pref}_ocsa.txt --gene-expression --make-bod --out $befile_prefix >> ${progress_log} 2>&1
+osca --efile $dir/osca_input/Phenotype_${h5ad_pref}_ocsa.txt --gene-expression --make-bod --out $befile_prefix >> ${progress_log} 2>&1
 
 # Step 2: Update OPI with user-specified input
 echo "OSCA: Updating OPI..."
-osca --befile $befile_prefix --update-opi $dir/Upprobe_${h5ad_pref}.opi >> ${progress_log} 2>&1
+osca --befile $befile_prefix --update-opi $dir/osca_input/Upprobe_${h5ad_pref}.opi >> ${progress_log} 2>&1
 
 # Step 3: Run eQTL analysis
 echo "OSCA: Running eQTL analysis..."
-osca --eqtl --bfile $plink_pref --befile $befile_prefix --cis --cis-wind 2000 \
-    --covar $dir/cov1_${h5ad_pref}.txt --qcovar $dir/cov2_${h5ad_pref}.txt --to-smr --thread-num 4 \
-    --out $dir/tempeqtl_$h5ad_pref >> ${progress_log} 2>&1
+osca --eqtl --bfile $plink_path --befile $befile_prefix --cis --cis-wind 2000 \
+    --covar $dir/osca_input/cov1_${h5ad_pref}.txt --qcovar $dir/osca_input/cov2_${h5ad_pref}.txt --to-smr --thread-num $num_cpus \
+    --out $dir/osca_intermediate/tempeqtl_$h5ad_pref >> ${progress_log} 2>&1
 
 # Step 4: Query eQTL summary with user-specified output
 echo "OSCA: Querying eQTL summary..."
-osca --beqtl-summary $dir/tempeqtl_$h5ad_pref  --query 1 --out $final_output >> ${progress_log} 2>&1
+osca --beqtl-summary $dir/osca_intermediate/tempeqtl_$h5ad_pref  --query 1 --out $dir/${h5ad_pref}_all_eqtl.tsv >> ${progress_log} 2>&1
 
 
 if [[ -n "${6:-}" ]]; then
-    echo "Running SMR..."
-    smr --bfile $plink_pref --gwas-summary $6 --beqtl-summary $dir/tempeqtl_$h5ad_pref --out ${final_output}_smr --thread-num $num_cpus >> $dir/smr_progress.log 2>&1
+    echo "Running SMR.."
+    smr --bfile $plink_path --gwas-summary $6 --beqtl-summary $dir/tempeqtl_$h5ad_pref --out $dir/${h5ad_pref} --thread-num $num_cpus >> $dir/osca_intermediate/smr_progress.log 2>&1
 fi
