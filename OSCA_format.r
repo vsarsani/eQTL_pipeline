@@ -8,18 +8,18 @@ args <- commandArgs(trailingOnly = TRUE)
 # $4 = directory the script was run from (for gene_loc.txt)
 # $5 = single cell data name (for expression matrices)
 
-workdir <- args[[3]]
-plink_pref <- args[[1]]
+# workdir <- args[[3]]
+# plink_pref <- args[[1]]
 
 
-# gene_annotation <- read.table("/Users/kzuckerm/Downloads/gene_loc (2).txt", header = TRUE) %>%
-gene_annotation <- read.table(paste0(args[[4]], "/gene_loc.txt"), header = TRUE) %>%
+gene_annotation <- read.table("/Users/kzuckerm/Desktop/NPH/eqtl_pipeline/gene_loc.txt", header = TRUE) %>%
+# gene_annotation <- read.table(paste0(args[[4]], "/gene_loc.txt"), header = TRUE) %>%
   distinct(NAME, .keep_all = TRUE)
 
-# wgs_subset <- read.table("/Users/kzuckerm/Desktop/NPH/MG_plink/Stevens_Macosko_MG.fam", header = FALSE)
-# genotype_pcs <- read.table("/Users/kzuckerm/Desktop/NPH/MG_plink/Stevens_Macosko_MG_pca.eigenvec") %>%
-wgs_subset <- read.table(paste0(plink_pref, ".fam"), header = FALSE)
-genotype_pcs <- read.table(paste0(workdir, "/", basename(plink_pref), ".eigenvec")) %>%
+wgs_subset <- read.table("/Users/kzuckerm/Desktop/NPH/MG_plink/Stevens_Macosko_MG.fam", header = FALSE)
+genotype_pcs <- read.table("/Users/kzuckerm/Desktop/NPH/CRM_CCL3_out/Stevens_Macosko_MG.eigenvec") %>%
+# wgs_subset <- read.table(paste0(plink_pref, ".fam"), header = FALSE)
+# genotype_pcs <- read.table(paste0(workdir, "/", basename(plink_pref), ".eigenvec")) %>%
   rename(
     Sample = V2,
     G_PC1 = V3,
@@ -31,18 +31,15 @@ genotype_pcs <- read.table(paste0(workdir, "/", basename(plink_pref), ".eigenvec
   select(!V1)
 
 
-# metadata <- read.csv("/Users/kzuckerm/Downloads/metadata.csv") %>%
-metadata <- read.csv(args[[2]]) %>%
+metadata <- read.csv("/Users/kzuckerm/Downloads/metadata.csv") %>%
+# metadata <- read.csv(args[[2]]) %>%
   mutate(Sex=as.factor(Sex), Age=as.numeric(gsub("[^0-9.-]", "", Age))) %>%
   select(Sample, Sex, Age)
 
-# List all expression matrix files created
-all_files <- list.files(paste0(workdir, "/processed_matrices"), pattern = "_expression_matrix_ds.csv")
-# print(paste0("Processing the following expression files: ", all_files))
-common_prefixes <- gsub("_expression_matrix_ds.csv", "", all_files)
 
-
-file <- args[[5]]
+# file <- args[[5]]
+workdir <- "/Users/kzuckerm/Desktop/NPH/CRM_CCL3_out"
+file <- "NPH_CRM_CCL3"
 
 # Subset only the NPH expression and composition files
 efile <- paste0(workdir, "/processed_matrices/", file, "_expression_matrix_ds.csv")
@@ -80,7 +77,7 @@ edata_subset <- edata[, matching_columns, drop = FALSE]
 
 # PCA
 pca_result <- prcomp(t(edata_subset), scale. = TRUE)
-top_30_pcs <- pca_result$x[, 1:30]
+top_30_pcs <- pca_result$x[, seq_len(min(30, nrow(pca_result$x)))]
 rownames(top_30_pcs) <- colnames(edata_subset)
 
 # Create phenotype and covariate data
