@@ -18,7 +18,14 @@ https://yanglab.westlake.edu.cn/software/smr/#Overview, add both to PATH
 
 ### Usage
 ```
-./bash_eqtl.sh PLINK_OBJECT SCRNA_OBJECT CLUSTER_NAME COVARIATES WORKDIR [GWAS_SUM_STATS] [NUM_CPUS]
+./bash_eqtl.sh \
+    PLINK_OBJECT \
+    SCRNA_OBJECT \
+    CLUSTER_NAME \
+    COVARIATES \
+    WORKDIR \
+    [GWAS_SUM_STATS] \
+    [NUM_CPUS]
 ```
 PLINK_OBJECT: Path to PLINK genotype object (omitting any file extension)
 
@@ -39,3 +46,4 @@ WORKDIR: Path to directory to save all files to
 - All paths can be gcloud paths or local paths. If GCloud paths are passed, files will be copied to the WORKDIR before proceeding
 - Make sure Sample names align between PLINK_OBJECT, SCRNA_OBJECT, and COVARIATES files. Nothing will work if they do not
 - If running SMR, note that GWAS summary statistics file MUST be in  GCTA-COJO format (although n column can be NA as it is not access in SMR). Use finngen_to_COJO.sh for converting Finngen data, or see SMR docs for file format
+- Important output files are [h5ad name]_all_eqtl.tsv for OSCA output, and [h5ad name].smr for SMR output

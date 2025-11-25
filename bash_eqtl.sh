@@ -93,5 +93,14 @@ osca --beqtl-summary $dir/osca_intermediate/tempeqtl_$h5ad_pref  --query 1 --out
 
 if [[ -n "${6:-}" ]]; then
     echo "Running SMR.."
-    smr --bfile $plink_path --gwas-summary $6 --beqtl-summary $dir/osca_intermediate/tempeqtl_$h5ad_pref --out $dir/${h5ad_pref} --thread-num $num_cpus >> $dir/osca_intermediate/smr_progress.log 2>&1
+    if [[ $6 == gs* ]]; then
+        gcloud storage cp $6 $dir
+        gwas=$dir/$(basename "$6")
+    else
+        gwas=$6
+    fi
+    smr --bfile $plink_path --gwas-summary $gwas --beqtl-summary $dir/osca_intermediate/tempeqtl_$h5ad_pref --out $dir/${h5ad_pref} --thread-num $num_cpus >> $dir/osca_intermediate/smr_progress.log 2>&1
 fi
+
+echo ""
+echo ""

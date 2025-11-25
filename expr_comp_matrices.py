@@ -6,10 +6,14 @@ import decoupler as dc
 from sccoda.util import cell_composition_data as dat
 
 sc.settings.n_jobs = 8
-input_files = [f for f in sys.argv[2:] if f[-5:] == ".h5ad"]
-cluster_names = [f for f in sys.argv[2:] if f[-5:] != ".h5ad"]
+# input_files = [f for f in sys.argv[2:] if f[-5:] == ".h5ad"]
+# cluster_names = [f for f in sys.argv[2:] if f[-5:] != ".h5ad"]
 
-workdir = sys.argv[1]
+# workdir = sys.argv[1]
+
+input_files = ["/Users/kzuckerm/Desktop/NPH/NPH_CRM_CCL3.h5ad"]
+cluster_names = ["finalcluster"]
+workdir = "/Users/kzuckerm/Desktop/NPH/CRM_CCL3_out"
 
 # Process each file
 for file, cluster in zip(input_files, cluster_names):
@@ -54,7 +58,7 @@ for file, cluster in zip(input_files, cluster_names):
     pdata = pdata[:, gene_filter]
     
     # Scale the data to a maximum value of 10
-    sc.pp.scale(pdata, max_value=10)
+    sc.pp.scale(pdata.copy(), max_value=10)
     
     # Save the processed data as a CSV file
     data=pd.DataFrame(pdata.X, index=pdata.obs_names, columns=pdata.var_names)

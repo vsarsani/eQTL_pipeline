@@ -88,7 +88,7 @@ covs1 <- merge(
   metadata %>% filter(Sample %in% row.names(top_30_pcs)), 
   pheno_with_svs, 
   by = "Sample"
-) %>% 
+) %>%
   select(Sample, Sex.x, Age.x, SV1, SV2, SV3, SV4, SV5) %>%
   rename(Sex = Sex.x, Age = Age.x)
 
@@ -99,7 +99,7 @@ clusters <-  read.csv(cfile) %>%
   rename(Sample=X)
 
 masterdf <- merge(merge(merge(merge(covs1, pcs, by = "Sample"), genotype_pcs, by = "Sample"), phenotype, by = "Sample") %>%
-  mutate(Age_scaled = (Age - min(Age)) / (max(Age) - min(Age))),clusters,by="Sample")
+  mutate(Age_scaled = (Age - min(Age)) / (max(Age) - min(Age))), clusters, by="Sample")
 
 valid_columns <- intersect(names(phenotype)[-1], names(masterdf))
 
@@ -145,8 +145,14 @@ write.table(masterdf %>%
             paste0(workdir, "/osca_input/cov1_", file, ".txt"),
             quote = FALSE, sep = "\t", row.names = FALSE)
 
+cluster_names <- names(clusters)[-1]
+covariates_ranked <- c("Age_scaled", "SV1", "G_PC1", "PC1", cluster_names,
+                       "SV2", "G_PC2", "PC2", "SV3", "G_PC3", "PC3",
+                       "SV4", "G_PC4", "PC4", "SV5", "G_PC5",
+                       colnames(pcs)[6:ncol(pcs)])
+
 write.table(masterdf %>%
               mutate(FID = 0, IID = Sample) %>%
-              select(FID, IID, names(pcs)[-1], "G_PC1", "G_PC2", "G_PC3", "G_PC4", "G_PC5", "SV1", "SV2", "SV3", "SV4", "SV5", Age_scaled,names(clusters)[-1]),
+              select(FID, IID, covariates_ranked[seq_len(nrow(pcs) - 2)]),
             paste0(workdir, "/osca_input/cov2_", file, ".txt"),
             quote = FALSE, sep = "\t", row.names = FALSE)
