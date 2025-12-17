@@ -52,10 +52,10 @@ for file, cluster in zip(input_files, cluster_names):
     output_file2 = os.path.join(f"{workdir}/processed_matrices/{os.path.splitext(os.path.basename(file))[0]}_composition_matrix_ds.csv")
 
     # Filter both datasets to only include common samples
-    common_samples = data.index.intersection(data_scanpy_1.obs.index)
-
     data = pd.DataFrame(pdata.X, index=pdata.obs_names, columns=pdata.var_names)
+    common_samples = data.index.intersection(data_scanpy_1.obs.index)
     del pdata
+
     data_aligned = data.loc[common_samples]
     data_aligned.to_csv(output_file1)
     print(f"Saved {output_file1}")
