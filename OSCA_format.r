@@ -17,7 +17,6 @@ gene_annotation <- read.table(paste0(args[[4]], "/gene_loc.txt"), header = TRUE)
 
 wgs_subset <- read.table(paste0(plink_pref, ".fam"), header = FALSE)
 
-print("pre genotype pcs")
 genotype_pcs <- read.table(paste0(workdir, "/", basename(plink_pref), ".eigenvec")) %>%
   rename(
     Sample = V2,
@@ -29,7 +28,6 @@ genotype_pcs <- read.table(paste0(workdir, "/", basename(plink_pref), ".eigenvec
   ) %>%
   select(!V1)
 
-print("pre metadata")
 metadata <- read.csv(args[[2]]) %>%
   mutate(Sex=as.factor(Sex), Age=as.numeric(gsub("[^0-9.-]", "", Age))) %>%
   select(Sample, Sex, Age)
@@ -47,11 +45,7 @@ edata <- t(
     column_to_rownames("X"))
 )
 
-# Formatting for expression sample names to align with genotype/metadata names
-colnames(edata) <- gsub("_.*", "", colnames(edata))
-colnames(edata) <- gsub(".", "_", colnames(edata), fixed = TRUE)
-
-# Filter metadata + expression data to match genotype data 
+# Filter metadata + expression data to match genotype data
 pheno <- metadata %>%
   filter(Sample %in% wgs_subset$V2 & Sample %in% colnames(edata))  %>%
   arrange(match(Sample, wgs_subset$V2))
@@ -80,7 +74,6 @@ rownames(top_30_pcs) <- colnames(edata_subset)
 phenotype <- as.data.frame(t(edata_subset)) %>%
   rownames_to_column("Sample")
 
-print("pre covs1")
 covs1 <- merge(
   metadata %>% filter(Sample %in% row.names(top_30_pcs)), 
   pheno_with_svs, 
@@ -100,7 +93,6 @@ masterdf <- merge(merge(merge(merge(covs1, pcs, by = "Sample"), genotype_pcs, by
 
 valid_columns <- intersect(names(phenotype)[-1], names(masterdf))
 
-print("pre phenotype <- masterdf")
 phenotype <- masterdf %>%
   mutate(FID = 0, IID = Sample) %>%
   select(FID, IID, all_of(valid_columns)) %>%
@@ -109,7 +101,6 @@ phenotype <- masterdf %>%
   t() %>%
   as.data.frame()
 
-print("pre merged data")
 merged_data <- merge(
   phenotype %>% rownames_to_column("NAME"),
   gene_annotation,
@@ -128,18 +119,15 @@ merged_data <- merged_data %>%
   arrange(match(NAME, rownames(phenotype)))
 
 # Write outputs
-print("pre phenotype_ocsa.txt")
 write.table(as.data.frame(t(phenotype)) %>% rownames_to_column("Sample") %>%
               mutate(FID = 0, IID = Sample) %>% select(FID, IID, rownames(phenotype)),
             paste0(workdir, "/osca_input/Phenotype_", file, "_ocsa.txt"),
             quote = FALSE, sep = "\t", row.names = FALSE)
 
-print("pre write upprobe")
 write.table(merged_data %>% select(chr, NAME, TSS, probe, strand),
             paste0(workdir, "/osca_input/Upprobe_", file, ".opi"),
             quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
 
-print("pre write cov1")
 write.table(masterdf %>%
               mutate(FID = 0, IID = Sample) %>%
               select(FID, IID, Sex) %>%
@@ -153,12 +141,6 @@ covariates_ranked <- c("Age_scaled", "SV1", "G_PC1", "PC1", cluster_names,
                        "SV4", "G_PC4", "PC4", "SV5", "G_PC5",
                        colnames(pcs)[6:ncol(pcs)])
 
-print(nrow(pcs))
-print(ncol(pcs))
-print(colnames(pcs))
-print(cluster_names)
-print(covariates_ranked)
-print("pre write cov2")
 write.table(masterdf %>%
               mutate(FID = 0, IID = Sample) %>%
               select(FID, IID, covariates_ranked[seq_len(nrow(pcs) - 2)]),
