@@ -84,7 +84,6 @@ covs1 <- merge(
 
 pcs <- as.data.frame(top_30_pcs) %>% rownames_to_column("Sample")
 clusters <-  read.csv(cfile) %>%
-  mutate(X = gsub(".", "_", gsub("_.*", "", X), fixed = TRUE)) %>%
   filter(X %in% colnames(edata)) %>%
   rename(Sample=X)
 
@@ -143,6 +142,9 @@ covariates_ranked <- c("Age_scaled", "SV1", "G_PC1", "PC1", cluster_names,
 
 write.table(masterdf %>%
               mutate(FID = 0, IID = Sample) %>%
-              select(FID, IID, covariates_ranked[seq_len(nrow(pcs) - 2)]),
+              select(FID,
+                IID,
+                covariates_ranked[seq_len(min(nrow(pcs) - 2, length(covariates_ranked)))]
+              ),
             paste0(workdir, "/osca_input/cov2_", file, ".txt"),
             quote = FALSE, sep = "\t", row.names = FALSE)
